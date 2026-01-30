@@ -2,10 +2,14 @@
 import { ScoreEntry, RankResult, Contestant } from '../types';
 
 /**
- * Annex C: Radio Broadcasting Time Deductions
+ * Annex C: Radio Broadcasting Time Deductions (5-minute production)
+ * 1-3s overtime = -1pt
+ * 6-20s = -2pts
+ * 21-40s = -3pts
+ * 41s+ = -5pts
  */
 export const calculateRadioDeduction = (seconds: number): number => {
-  const limit = 300; // 5 mins
+  const limit = 300; 
   const overtime = seconds - limit;
   if (overtime <= 0) return 0;
   if (overtime <= 3) return 1;
@@ -15,10 +19,14 @@ export const calculateRadioDeduction = (seconds: number): number => {
 };
 
 /**
- * Annex F: TV Broadcasting Time Deductions
+ * Annex F: TV Broadcasting Time Deductions (6-minute broadcast)
+ * 1-15s = -1pt
+ * 16-45s = -2pts
+ * 46-75s = -3pts
+ * 76s+ = -5pts
  */
 export const calculateTVDeduction = (seconds: number): number => {
-  const limit = 360; // 6 mins
+  const limit = 360; 
   const overtime = seconds - limit;
   if (overtime <= 0) return 0;
   if (overtime <= 15) return 1;
@@ -28,75 +36,79 @@ export const calculateTVDeduction = (seconds: number): number => {
 };
 
 /**
- * Annex H: Tabulation Algorithm (Rank 1-16)
- * Based on Lowest Sum of Ranks.
+ * Task 3: The Tabulation Engine (Annex H Logic)
  */
 export const tabulateResults = (
   contestants: Contestant[],
   scores: ScoreEntry[]
 ): RankResult[] => {
-  const contestantScoresMap: Record<string, ScoreEntry[]> = {};
-  scores.forEach(s => {
-    if (!contestantScoresMap[s.contestant_id]) {
-      contestantScoresMap[s.contestant_id] = [];
-    }
-    contestantScoresMap[s.contestant_id].push(s);
-  });
-
-  const judgeIds = Array.from(new Set(scores.map(s => s.judge_id)));
-  
-  // 1. Calculate each judge's rank for each contestant
-  const judgeRankings: Record<string, Record<string, number>> = {};
-  
-  judgeIds.forEach(jId => {
-    judgeRankings[jId] = {};
-    const jScores = scores.filter(s => s.judge_id === jId);
-    jScores.sort((a, b) => b.final_score - a.final_score);
-    
-    jScores.forEach((s, i) => {
-      judgeRankings[jId][s.contestant_id] = i + 1;
-    });
-  });
-
-  // 2. Build RankResult list
   const results: RankResult[] = contestants.map(c => {
-    const cScores = contestantScoresMap[c.id] || [];
-    const ranks = judgeIds.map(jId => judgeRankings[jId][c.id] || 0).filter(r => r > 0);
-    const sumOfRanks = ranks.reduce((acc, r) => acc + r, 0);
-    const avgScore = cScores.length > 0 
-      ? cScores.reduce((acc, s) => acc + s.final_score, 0) / cScores.length 
-      : 0;
+    const contestantScores = scores.filter(s => s.contestant_id === c.id);
+    
+    // Average System
+    const sumFinalScores = contestantScores.reduce((acc, s) => acc + s.final_score, 0);
+    const averageScore = contestantScores.length > 0 ? sumFinalScores / contestantScores.length : 0;
+    
+    // Calculate judge ranks for tie-breaking "Sum of Ranks" if needed
+    // and extract the "Highest Individual Judge Score" as a tie-breaker
+    const judgeRanks = contestantScores.map(s => {
+      const sameJudgeScores = scores.filter(os => os.judge_id === s.judge_id);
+      sameJudgeScores.sort((a, b) => b.final_score - a.final_score);
+      return sameJudgeScores.findIndex(os => os.contestant_id === c.id) + 1;
+    });
+
+    const maxSingleScore = Math.max(...contestantScores.map(s => s.final_score), 0);
 
     return {
       contestant_id: c.id,
       contestant_code: c.code,
       division: c.division,
-      judge_ranks: ranks,
-      sum_of_ranks: sumOfRanks,
-      average_raw_score: avgScore,
+      judge_ranks: judgeRanks,
+      sum_of_ranks: judgeRanks.reduce((a, b) => a + b, 0),
+      average_raw_score: averageScore,
+      max_individual_score: maxSingleScore,
       final_rank: 0
     };
   });
 
-  // 3. Sort by Lowest Sum of Ranks, then Highest Average Raw Score
+  /**
+   * TIE-BREAKING LOGIC:
+   * 1. Average Raw Score (Highest first)
+   * 2. Highest Individual Judge Score (Highest first)
+   * 3. Lowest Sum of Ranks (if ranks were pre-calculated per judge)
+   */
   results.sort((a, b) => {
-    if (a.sum_of_ranks !== b.sum_of_ranks) return a.sum_of_ranks - b.sum_of_ranks;
-    return b.average_raw_score - a.average_raw_score;
+    // Primary: Average
+    if (b.average_raw_score !== a.average_raw_score) {
+      return b.average_raw_score - a.average_raw_score;
+    }
+    // Secondary: Highest Individual Score
+    if (b.max_individual_score !== a.max_individual_score) {
+      return b.max_individual_score - a.max_individual_score;
+    }
+    // Tertiary: Sum of Ranks (Lower is better in this specific ranking context)
+    return a.sum_of_ranks - b.sum_of_ranks;
   });
 
-  // 4. Assign Final Rank
-  results.forEach((r, i) => { r.final_rank = i + 1; });
+  results.forEach((r, i) => {
+    r.final_rank = i + 1;
+  });
 
   return results;
 };
 
+/**
+ * Overall Top Division Logic (Annex H)
+ * Assigns points based on rank (1st = 1pt). Lowest total sum wins.
+ */
 export const calculateDivisionPoints = (results: RankResult[]): Record<string, number> => {
   const points: Record<string, number> = {};
   results.forEach(r => {
-    if (!points[r.division]) points[r.division] = 0;
-    // Annex H logic for overall: usually points are given based on rank (1st=7, 2nd=6, etc.)
-    // But request said "Lowest Sum of Ranks for Overall Top Division"
-    points[r.division] += r.final_rank;
+    // Only top 10 finishers typically contribute to Division Points
+    if (r.final_rank <= 10) {
+      if (!points[r.division]) points[r.division] = 0;
+      points[r.division] += r.final_rank;
+    }
   });
   return points;
 };

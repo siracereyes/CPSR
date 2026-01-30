@@ -1,4 +1,5 @@
-import React, { ReactNode, ErrorInfo } from 'react';
+
+import React, { Component, ReactNode, ErrorInfo } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
@@ -15,15 +16,15 @@ interface ErrorBoundaryState {
  * RSPC Core Error Boundary
  * Captures and displays fatal runtime errors with diagnostic information.
  */
-// Fix: Explicitly use React.Component with generics to ensure this.state and this.props are correctly typed (Fixes errors on lines 21, 40, 57, 72)
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+// Fix: Use Component from 'react' and explicitly initialize state to resolve property access errors (Fixes errors on lines 23, 43, 62, 78)
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = {
+    hasError: false,
+    error: null
+  };
+
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    // Fix: Correctly initialize state property on the class instance (Fix for line 21)
-    this.state = { 
-      hasError: false, 
-      error: null 
-    };
   }
 
   static getDerivedStateFromError(error: any): ErrorBoundaryState {
@@ -39,14 +40,13 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   render() {
-    // Fix: Check this.state.hasError through correctly typed state (Fix for line 40)
+    // Fix: Access state safely through typed class property (Fix for line 43)
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
           <div className="max-w-lg w-full bg-white p-10 rounded-[3rem] shadow-2xl border border-red-100 text-center">
             <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6 rotate-3">
                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {/* Corrected SVG attributes for React (camelCase) to avoid JSX validation errors */}
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                </svg>
             </div>
@@ -58,7 +58,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             <div className="bg-slate-50 p-6 rounded-3xl text-left mb-8 border border-slate-200 overflow-hidden shadow-inner">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Technical Diagnostics</p>
               <code className="text-[11px] font-mono text-red-600 break-all leading-tight block bg-red-50/50 p-3 rounded-xl border border-red-100/50">
-                {/* Fix: Access error through this.state (Fix for line 57) */}
+                {/* Fix: Access error through this.state (Fix for line 62) */}
                 {this.state.error?.toString() || "Unknown Initialization Error"}
               </code>
             </div>
@@ -74,7 +74,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       );
     }
     
-    // Fix: Return this.props.children through correctly typed props (Fix for line 72)
+    // Fix: Return this.props.children through correctly inherited props (Fix for line 78)
     return this.props.children;
   }
 }

@@ -1,4 +1,5 @@
 
+
 export type Category = 
   | 'News Writing' 
   | 'Editorial Writing' 
@@ -20,6 +21,11 @@ export interface Profile {
   full_name: string;
 }
 
+// Fix: Define Judge interface used in scoring components (Fixes error in JudgeScoreSheet.tsx line 4)
+export interface Judge extends Profile {
+  assigned_category: Category;
+}
+
 export interface JudgeAssignment {
   id: string;
   judge_id: string;
@@ -30,19 +36,13 @@ export interface JudgeAssignment {
 
 export interface Contestant {
   id: string;
-  code: string; // Anonymized ID for judges
+  code: string;
   name: string;
   school: string;
   division: string;
   category: Category;
   level: Level;
   medium: Medium;
-}
-
-export interface Judge {
-  id: string;
-  name: string;
-  assigned_category: Category;
 }
 
 export interface RawScores {
@@ -83,5 +83,6 @@ export interface RankResult {
   judge_ranks: number[]; 
   sum_of_ranks: number;
   average_raw_score: number;
+  max_individual_score: number;
   final_rank: number;
 }
