@@ -4,14 +4,13 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = 'https://nqgsrvqepavqkbpnjlzc.supabase.co';
 
 /**
- * Supabase client initialization.
  * The API key is obtained exclusively from process.env.API_KEY.
+ * If this key starts with "AIza", it is a Google Gemini key and will not work with Supabase.
  */
 const supabaseKey = (typeof process !== 'undefined' && process.env?.API_KEY) || (window as any).process?.env?.API_KEY || '';
 
-// If the key is empty, the client will throw an error on the first request, 
-// which we can catch in the UI.
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// We provide a fallback string to prevent the client from throwing a "Key required" error during boot.
+export const supabase = createClient(supabaseUrl, supabaseKey || 'KEY_MISSING');
 
 export const GENERATED_SQL = `
 -- RSPC 2026 Core Schema

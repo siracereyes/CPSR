@@ -7,7 +7,7 @@
     <title>RSPC 2026 Tabulation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Critical: Ensure process.env exists for libraries that expect it
+        // Critical: Shim process.env for browser usage before any modules load
         window.process = window.process || { env: {} };
     </script>
     <style>
