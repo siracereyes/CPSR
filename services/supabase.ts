@@ -2,22 +2,13 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://nqgsrvqepavqkbpnjlzc.supabase.co';
-
 /**
- * Safely retrieves the API Key from the environment.
- * In production/Vercel, this must be set in the environment variables.
+ * As per instructions, API_KEY is obtained exclusively from the environment.
+ * The variable is assumed to be pre-configured and valid.
  */
-const getApiKey = (): string => {
-  const key = (window as any).process?.env?.API_KEY || '';
-  if (!key) {
-    console.warn("RSPC SYSTEM: API_KEY is currently empty. Database operations will fail.");
-  }
-  return key;
-};
+const supabaseKey = process.env.API_KEY as string;
 
-// Initializing the client. If the key is empty, the client will fail gracefully on use.
-const supabaseKey = getApiKey();
-export const supabase = createClient(supabaseUrl, supabaseKey || 'KEY_NOT_CONFIGURED');
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const GENERATED_SQL = `
 -- RSPC 2026 Core Schema

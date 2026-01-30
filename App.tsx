@@ -15,32 +15,17 @@ const App: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [loading, setLoading] = useState(true);
-  const [configError, setConfigError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if the API Key is set correctly
-    const apiKey = (window as any).process?.env?.API_KEY;
-    if (!apiKey) {
-      setConfigError("The Supabase API Key is missing. Please ensure 'API_KEY' is set in your environment variables.");
-      setLoading(false);
-      return;
-    }
-
     const initializeApp = async () => {
       try {
-        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
-
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         setSession(currentSession);
         if (currentSession) {
           await fetchProfile(currentSession.user.id);
         }
-      } catch (err: any) {
-        console.error("Auth init error:", err);
-        // If it's a 401/403, it's likely an invalid key
-        if (err.message?.includes('invalid') || err.status === 401) {
-          setConfigError("Invalid Supabase API Key. Please verify your Anon Public Key in settings.");
-        }
+      } catch (err) {
+        console.error("Authentication check failed:", err);
       } finally {
         setLoading(false);
       }
@@ -74,22 +59,6 @@ const App: React.FC = () => {
       <div className="flex flex-col items-center">
         <div className="w-12 h-12 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mb-4"></div>
         <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Verifying RSPC Hub</p>
-      </div>
-    </div>
-  );
-
-  if (configError) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-      <div className="max-w-md w-full bg-white p-10 rounded-[2.5rem] shadow-2xl border border-red-100 text-center">
-        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-        </div>
-        <h2 className="text-xl font-black text-slate-900 mb-2">Configuration Error</h2>
-        <p className="text-red-500 text-sm mb-8 font-medium leading-relaxed">{configError}</p>
-        <div className="space-y-3">
-          <a href="https://vercel.com/docs/concepts/projects/environment-variables" target="_blank" rel="noopener" className="block w-full bg-slate-100 text-slate-700 font-bold py-3 rounded-xl text-xs uppercase tracking-widest">Vercel Env Docs</a>
-          <button onClick={() => window.location.reload()} className="w-full bg-blue-900 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">Retry Connection</button>
-        </div>
       </div>
     </div>
   );

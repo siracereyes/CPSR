@@ -11,17 +11,12 @@
         window.process = window.process || {};
         window.process.env = window.process.env || {};
         
-        // Ensure API_KEY is at least an empty string to prevent ReferenceErrors
-        if (typeof window.process.env.API_KEY === 'undefined') {
-            window.process.env.API_KEY = "";
-        }
-        
         // Diagnostic timer for deployment monitoring
         window.addEventListener('load', () => {
             setTimeout(() => {
                 const root = document.getElementById('root');
                 if (root && root.innerHTML === "") {
-                    console.error("RSPC Boot Error: React failed to mount within 5 seconds.");
+                    console.error("RSPC Boot Error: Application failed to mount.");
                     root.innerHTML = `
                         <div class="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center">
                             <div class="max-w-md bg-white p-10 rounded-[2.5rem] shadow-2xl border border-red-100">
@@ -31,7 +26,7 @@
                                     </svg>
                                 </div>
                                 <h1 class="text-xl font-black text-slate-900 mb-2">Engine Timeout</h1>
-                                <p class="text-slate-500 text-sm mb-6">The application failed to start. This is usually due to an incorrect API key or a network failure during module resolution.</p>
+                                <p class="text-slate-500 text-sm mb-6">The application failed to start. This may be due to a configuration mismatch or network failure during module loading.</p>
                                 <button onclick="window.location.reload()" class="bg-blue-900 text-white px-6 py-3 rounded-xl font-bold shadow-lg">Retry Boot</button>
                             </div>
                         </div>
