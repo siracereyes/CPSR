@@ -3,12 +3,18 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://nqgsrvqepavqkbpnjlzc.supabase.co';
 
-// Safe environment variable access for browser contexts
+/**
+ * Safely retrieve the API key from environment variables.
+ * We use a fallback logic to prevent the app from crashing during the bootstrapping phase.
+ */
 const getApiKey = (): string => {
   try {
-    // @ts-ignore - process might not be defined in all environments
-    return (typeof process !== 'undefined' && process.env && process.env.API_KEY) || '';
+    // Check various common injection points for the API key
+    // In Vercel, process.env is usually used, but we check window shim too
+    const env = (typeof process !== 'undefined' && process.env) ? process.env : (window as any).process?.env;
+    return env?.API_KEY || '';
   } catch (e) {
+    console.warn("Could not access environment variables for API_KEY retrieval.");
     return '';
   }
 };
@@ -16,10 +22,12 @@ const getApiKey = (): string => {
 const supabaseKey = getApiKey();
 
 if (!supabaseKey) {
-  console.warn("Supabase API Key is missing. Ensure process.env.API_KEY is configured.");
+  console.error("CRITICAL ERROR: Supabase API Key (process.env.API_KEY) is missing. The application will not be able to authenticate users or save scores.");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// We initialize the client even if the key is missing to avoid 'undefined' errors later.
+// Individual calls will correctly fail with 401/403 which we handle in the UI.
+export const supabase = createClient(supabaseUrl, supabaseKey || 'MISSING_API_KEY');
 
 export const GENERATED_SQL = `
 -- RSPC 2026 Core Schema
