@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from './services/supabase';
 import Layout from './components/Layout';
@@ -17,19 +16,33 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) fetchProfile(session.user.id);
-      else setLoading(false);
-    });
+    const initializeApp = async () => {
+      try {
+        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) throw sessionError;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) fetchProfile(session.user.id);
-      else {
-        setProfile(null);
+        setSession(currentSession);
+        if (currentSession) {
+          await fetchProfile(currentSession.user.id);
+        }
+      } catch (err) {
+        console.error("Auth initialization error:", err);
+      } finally {
         setLoading(false);
       }
+    };
+
+    initializeApp();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      if (session) {
+        await fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -39,13 +52,11 @@ const App: React.FC = () => {
     try {
       const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single();
       if (error) {
-        console.error("Error fetching profile:", error.message);
+        console.warn("Profile fetch warning:", error.message);
       }
       if (data) setProfile(data);
     } catch (err) {
       console.error("Unexpected error in fetchProfile:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -53,7 +64,7 @@ const App: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="flex flex-col items-center">
         <div className="w-12 h-12 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Authenticating Session</p>
+        <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Verifying Security Layer</p>
       </div>
     </div>
   );
@@ -85,27 +96,28 @@ const App: React.FC = () => {
       <div className="animate-in fade-in duration-500">
         <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <span className="text-xs font-black text-blue-600 uppercase tracking-widest">
-              Portal Access: {profile?.role || 'Guest'}
+            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded">
+              {profile?.role || 'Restricted Access'}
             </span>
-            <h2 className="text-2xl font-bold text-slate-900">
+            <h2 className="text-2xl font-bold text-slate-900 mt-1">
               {profile?.full_name || session.user.email}
             </h2>
           </div>
           <button 
             onClick={() => supabase.auth.signOut()}
-            className="bg-white px-4 py-2 rounded-xl border border-slate-200 text-slate-400 hover:text-red-600 text-sm font-bold flex items-center transition-all shadow-sm hover:shadow"
+            className="bg-white px-4 py-2 rounded-xl border border-slate-200 text-slate-400 hover:text-red-600 text-xs font-bold flex items-center transition-all shadow-sm hover:shadow"
           >
             Sign Out
             <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" strokeWidth="2"/>
+              <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
         </div>
         
         {!profile && isAdmin && (
-          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">
-            <strong>Notice:</strong> Your profile record was not found in the 'profiles' table. Some admin features may be restricted until your account is initialized in the database.
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-700 text-xs flex items-center gap-3">
+            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
+            <p><strong>Database Desync:</strong> No matching record in <code>profiles</code> table. Run the SQL in System tab to fix.</p>
           </div>
         )}
 
