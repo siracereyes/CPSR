@@ -1,0 +1,7 @@
+{
+  "name": "RSPC 2026 Scoring & Tabulation System",
+  "description": "A comprehensive scoring and tabulation system for the Regional School Press Conference (RSPC) 2026, featuring official DepEd rubrics, automated time deductions, and rank-based tabulation logic.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
