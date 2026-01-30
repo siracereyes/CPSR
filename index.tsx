@@ -14,17 +14,21 @@ interface ErrorBoundaryState {
 
 /**
  * RSPC Core Error Boundary
- * Captures and displays fatal runtime errors with diagnostic information.
  */
-// Fix: Use Component from 'react' and explicitly initialize state to resolve property access errors (Fixes errors on lines 23, 43, 62, 78)
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = {
-    hasError: false,
-    error: null
-  };
+// Fix: Explicitly extend React.Component and declare state/props to resolve "Property does not exist" errors in specific TypeScript configurations
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Fix: Explicitly declaring state to satisfy property existence checks (Lines 21, 39, 56)
+  public state: ErrorBoundaryState;
+  // Fix: Explicitly declaring props to satisfy property existence checks (Line 71)
+  public props: ErrorBoundaryProps;
 
   constructor(props: ErrorBoundaryProps) {
     super(props);
+    this.state = {
+      hasError: false,
+      error: null
+    };
+    this.props = props;
   }
 
   static getDerivedStateFromError(error: any): ErrorBoundaryState {
@@ -32,7 +36,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: any, errorInfo: ErrorInfo) {
-    // Log to console for developer diagnostics
     console.group("RSPC 2026 - Critical Runtime Error");
     console.error("Error:", error);
     console.error("Info:", errorInfo);
@@ -40,7 +43,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   render() {
-    // Fix: Access state safely through typed class property (Fix for line 43)
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
@@ -52,13 +54,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
             </div>
             <h1 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Application Crashed</h1>
             <p className="text-slate-500 text-sm mb-8 leading-relaxed max-w-sm mx-auto">
-              The interface encountered an unrecoverable error. This is often caused by a database connection failure or an invalid API response.
+              The interface encountered an unrecoverable error. This is often caused by a missing database key or a network timeout.
             </p>
             
             <div className="bg-slate-50 p-6 rounded-3xl text-left mb-8 border border-slate-200 overflow-hidden shadow-inner">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Technical Diagnostics</p>
               <code className="text-[11px] font-mono text-red-600 break-all leading-tight block bg-red-50/50 p-3 rounded-xl border border-red-100/50">
-                {/* Fix: Access error through this.state (Fix for line 62) */}
                 {this.state.error?.toString() || "Unknown Initialization Error"}
               </code>
             </div>
@@ -74,29 +75,35 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       );
     }
     
-    // Fix: Return this.props.children through correctly inherited props (Fix for line 78)
+    // Fix: Explicitly returned children from props (Line 71)
     return this.props.children;
   }
 }
 
-// Initializing the application root with safety checks
-const rootElement = document.getElementById('root');
-
-if (rootElement) {
-  try {
-    const root = ReactDOM.createRoot(rootElement);
-    root.render(
-      <React.StrictMode>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-      </React.StrictMode>
-    );
-  } catch (err) {
-    console.error("CRITICAL: Failed to mount React application root.", err);
-    // Direct DOM manipulation as a last resort if React-DOM fails
-    rootElement.innerHTML = `<div style="padding: 2rem; font-family: sans-serif; text-align: center;"><h1>Engine Mounting Failed</h1><p>${err}</p></div>`;
+// Initializing the application root
+const init = () => {
+  const rootElement = document.getElementById('root');
+  if (rootElement) {
+    try {
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(
+        <React.StrictMode>
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
+        </React.StrictMode>
+      );
+      console.log("RSPC Engine Mounted Successfully.");
+    } catch (err) {
+      console.error("CRITICAL: Failed to mount React application root.", err);
+      rootElement.innerHTML = `<div style="padding: 2rem; font-family: sans-serif; text-align: center; color: red;"><h1>Engine Mounting Failed</h1><p>${err}</p></div>`;
+    }
   }
+};
+
+// Start initialization
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
 } else {
-  console.error("CRITICAL: Root element '#root' not found in document.");
+  init();
 }
