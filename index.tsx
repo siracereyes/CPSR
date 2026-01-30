@@ -1,4 +1,4 @@
-import React, { Component, ReactNode, ErrorInfo } from 'react';
+import React, { ReactNode, ErrorInfo } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
@@ -11,16 +11,19 @@ interface ErrorBoundaryState {
   error: any;
 }
 
-// Fixed: Explicitly use Component from react and ensure state/props are correctly typed to resolve property existence errors (Line 19, 32, 42, 56 fix)
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Explicitly initialize state property to ensure property existence within TypeScript's strict mode
-  public state: ErrorBoundaryState = { 
-    hasError: false, 
-    error: null 
-  };
-
+/**
+ * RSPC Core Error Boundary
+ * Captures and displays fatal runtime errors with diagnostic information.
+ */
+// Fix: Explicitly use React.Component with generics to ensure this.state and this.props are correctly typed (Fixes errors on lines 21, 40, 57, 72)
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
+    // Fix: Correctly initialize state property on the class instance (Fix for line 21)
+    this.state = { 
+      hasError: false, 
+      error: null 
+    };
   }
 
   static getDerivedStateFromError(error: any): ErrorBoundaryState {
@@ -28,40 +31,57 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: any, errorInfo: ErrorInfo) {
-    console.error("Critical System Failure:", error, errorInfo);
+    // Log to console for developer diagnostics
+    console.group("RSPC 2026 - Critical Runtime Error");
+    console.error("Error:", error);
+    console.error("Info:", errorInfo);
+    console.groupEnd();
   }
 
   render() {
-    // Fixed: state access is now correctly resolved through Component inheritance
+    // Fix: Check this.state.hasError through correctly typed state (Fix for line 40)
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-          <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-2xl border border-red-100 text-center">
-            <h1 className="text-xl font-bold text-slate-900 mb-2">Application Crash</h1>
-            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-              The interface encountered a fatal error. This often happens if the Supabase project is not yet initialized with the required SQL schema.
+          <div className="max-w-lg w-full bg-white p-10 rounded-[3rem] shadow-2xl border border-red-100 text-center">
+            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6 rotate-3">
+               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {/* Corrected SVG attributes for React (camelCase) to avoid JSX validation errors */}
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+               </svg>
+            </div>
+            <h1 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Application Crashed</h1>
+            <p className="text-slate-500 text-sm mb-8 leading-relaxed max-w-sm mx-auto">
+              The interface encountered an unrecoverable error. This is often caused by a database connection failure or an invalid API response.
             </p>
-            <div className="bg-slate-50 p-4 rounded-xl text-left mb-6 overflow-hidden border border-slate-200">
-              <code className="text-[10px] text-red-500 break-all">
-                {this.state.error?.toString() || "Unknown Error"}
+            
+            <div className="bg-slate-50 p-6 rounded-3xl text-left mb-8 border border-slate-200 overflow-hidden shadow-inner">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Technical Diagnostics</p>
+              <code className="text-[11px] font-mono text-red-600 break-all leading-tight block bg-red-50/50 p-3 rounded-xl border border-red-100/50">
+                {/* Fix: Access error through this.state (Fix for line 57) */}
+                {this.state.error?.toString() || "Unknown Initialization Error"}
               </code>
             </div>
+
             <button 
               onClick={() => window.location.reload()}
-              className="w-full bg-blue-900 text-white font-bold py-3 rounded-xl hover:bg-blue-800 transition-all shadow-md"
+              className="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl hover:bg-slate-800 transition-all shadow-xl active:scale-95"
             >
-              Restart System
+              Restart Tabulation Engine
             </button>
           </div>
         </div>
       );
     }
-    // Fixed: props access is now correctly resolved via Component base class
+    
+    // Fix: Return this.props.children through correctly typed props (Fix for line 72)
     return this.props.children;
   }
 }
 
+// Initializing the application root with safety checks
 const rootElement = document.getElementById('root');
+
 if (rootElement) {
   try {
     const root = ReactDOM.createRoot(rootElement);
@@ -73,6 +93,10 @@ if (rootElement) {
       </React.StrictMode>
     );
   } catch (err) {
-    console.error("Failed to initialize ReactDOM:", err);
+    console.error("CRITICAL: Failed to mount React application root.", err);
+    // Direct DOM manipulation as a last resort if React-DOM fails
+    rootElement.innerHTML = `<div style="padding: 2rem; font-family: sans-serif; text-align: center;"><h1>Engine Mounting Failed</h1><p>${err}</p></div>`;
   }
+} else {
+  console.error("CRITICAL: Root element '#root' not found in document.");
 }
