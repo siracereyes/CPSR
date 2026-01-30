@@ -14,7 +14,7 @@ const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
-  const [loading, setLoading] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -27,7 +27,7 @@ const App: React.FC = () => {
       } catch (err) {
         console.error("Authentication check failed:", err);
       } finally {
-        setLoading(false);
+        setIsInitializing(false);
       }
     };
 
@@ -54,16 +54,10 @@ const App: React.FC = () => {
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="flex flex-col items-center">
-        <div className="w-12 h-12 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Verifying RSPC Hub</p>
-      </div>
-    </div>
-  );
-
-  if (!session) return <Login />;
+  // If we are still doing the initial check and have no session, we skip the splash screen
+  // to show the login UI as fast as possible.
+  if (!session && !isInitializing) return <Login />;
+  if (!session && isInitializing) return null; // Avoid flicker
 
   const isAdmin = profile?.role === 'admin';
 

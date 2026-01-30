@@ -7,64 +7,13 @@
     <title>RSPC 2026 Tabulation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Critical: Shim process.env for browser usage
+        // Global environment shim - critical for browser-side process.env access
         window.process = window.process || {};
         window.process.env = window.process.env || {};
-        
-        // Diagnostic for boot sequence
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                const root = document.getElementById('root');
-                if (root && root.innerHTML === "") {
-                    console.error("RSPC 2026: Application failed to mount in 5 seconds.");
-                    root.innerHTML = `
-                        <div class="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center">
-                            <div class="max-w-md bg-white p-10 rounded-[2.5rem] shadow-2xl border border-red-100">
-                                <div class="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                    </svg>
-                                </div>
-                                <h1 class="text-xl font-black text-slate-900 mb-2">Engine Timeout</h1>
-                                <p class="text-slate-500 text-sm mb-6 leading-relaxed">The application failed to initialize. Please check if the <b>API_KEY</b> environment variable is correctly set in your deployment settings.</p>
-                                <button onclick="window.location.reload()" class="bg-blue-900 text-white px-8 py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-all">Retry Boot</button>
-                            </div>
-                        </div>
-                    `;
-                }
-            }, 5000);
-        });
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
-        
-        #root:empty {
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-        #root:empty::before {
-            content: "";
-            width: 48px;
-            height: 48px;
-            border: 4px solid #e2e8f0;
-            border-top-color: #1e3a8a;
-            border-radius: 50%;
-            animation: spin 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
-        }
-        #root:empty::after {
-            content: "RSPC 2026 • INITIALIZING";
-            font-size: 10px;
-            font-weight: 900;
-            color: #1e3a8a;
-            letter-spacing: 0.2em;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; background-color: #f8fafc; }
     </style>
     <script type="importmap">
 {
@@ -81,7 +30,7 @@
 </script>
     <script type="module" src="./index.tsx"></script>
 </head>
-<body class="bg-slate-50">
+<body>
     <div id="root"></div>
 </body>
 </html>
