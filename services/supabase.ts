@@ -2,7 +2,22 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://nqgsrvqepavqkbpnjlzc.supabase.co';
-const supabaseKey = process.env.API_KEY || ''; 
+
+// Safe environment variable access for browser contexts
+const getApiKey = (): string => {
+  try {
+    // @ts-ignore - process might not be defined in all environments
+    return (typeof process !== 'undefined' && process.env && process.env.API_KEY) || '';
+  } catch (e) {
+    return '';
+  }
+};
+
+const supabaseKey = getApiKey();
+
+if (!supabaseKey) {
+  console.warn("Supabase API Key is missing. Ensure process.env.API_KEY is configured.");
+}
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 

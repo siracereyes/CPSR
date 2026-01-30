@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import Login from './components/Auth/Login';
 import JudgeDashboard from './components/Judge/JudgeDashboard';
 import AdminTabulation from './components/AdminTabulation';
+import OverallTabulation from './components/Admin/OverallTabulation';
 import JudgeManager from './components/Admin/JudgeManager';
 import SchemaView from './components/SchemaView';
 import { Profile } from './types';
@@ -35,9 +36,17 @@ const App: React.FC = () => {
   }, []);
 
   const fetchProfile = async (uid: string) => {
-    const { data } = await supabase.from('profiles').select('*').eq('id', uid).single();
-    if (data) setProfile(data);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single();
+      if (error) {
+        console.error("Error fetching profile:", error.message);
+      }
+      if (data) setProfile(data);
+    } catch (err) {
+      console.error("Unexpected error in fetchProfile:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) return (
@@ -57,6 +66,7 @@ const App: React.FC = () => {
     if (isAdmin) {
       switch (activeTab) {
         case 'Dashboard': return <AdminTabulation />;
+        case 'Overall': return <OverallTabulation />;
         case 'Judges': return <JudgeManager />;
         case 'System': return <SchemaView />;
         default: return <AdminTabulation />;
@@ -67,25 +77,38 @@ const App: React.FC = () => {
   };
 
   const navItems = isAdmin 
-    ? ['Dashboard', 'Judges', 'System'] 
+    ? ['Dashboard', 'Overall', 'Judges', 'System'] 
     : ['Dashboard'];
 
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab} customNav={navItems}>
       <div className="animate-in fade-in duration-500">
-        <div className="mb-8 flex justify-between items-center">
+        <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <span className="text-xs font-black text-blue-600 uppercase tracking-widest">Portal Access: {profile?.role}</span>
-            <h2 className="text-2xl font-bold text-slate-900">{profile?.full_name}</h2>
+            <span className="text-xs font-black text-blue-600 uppercase tracking-widest">
+              Portal Access: {profile?.role || 'Guest'}
+            </span>
+            <h2 className="text-2xl font-bold text-slate-900">
+              {profile?.full_name || session.user.email}
+            </h2>
           </div>
           <button 
             onClick={() => supabase.auth.signOut()}
-            className="text-slate-400 hover:text-red-600 text-sm font-bold flex items-center transition-colors"
+            className="bg-white px-4 py-2 rounded-xl border border-slate-200 text-slate-400 hover:text-red-600 text-sm font-bold flex items-center transition-all shadow-sm hover:shadow"
           >
             Sign Out
-            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" strokeWidth="2"/></svg>
+            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" strokeWidth="2"/>
+            </svg>
           </button>
         </div>
+        
+        {!profile && isAdmin && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">
+            <strong>Notice:</strong> Your profile record was not found in the 'profiles' table. Some admin features may be restricted until your account is initialized in the database.
+          </div>
+        )}
+
         {renderContent()}
       </div>
     </Layout>
