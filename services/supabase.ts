@@ -5,23 +5,13 @@ const supabaseUrl = 'https://nqgsrvqepavqkbpnjlzc.supabase.co';
 
 /**
  * Supabase client initialization.
- * As per instructions, we use process.env.API_KEY exclusively.
+ * The API key is obtained exclusively from process.env.API_KEY.
  */
-const getApiKey = (): string => {
-  // Check common locations for the injected API key
-  const envKey = process.env.API_KEY || (window as any).process?.env?.API_KEY;
-  return envKey || '';
-};
+const supabaseKey = (typeof process !== 'undefined' && process.env?.API_KEY) || (window as any).process?.env?.API_KEY || '';
 
-const supabaseKey = getApiKey();
-
-if (!supabaseKey) {
-  console.error("RSPC Critical: process.env.API_KEY is missing. Database operations will fail.");
-}
-
-// We provide a dummy key 'REQUIRED' if missing to allow the client to initialize 
-// without throwing a 'New client requires a key' error, allowing the UI to at least render.
-export const supabase = createClient(supabaseUrl, supabaseKey || 'REQUIRED');
+// If the key is empty, the client will throw an error on the first request, 
+// which we can catch in the UI.
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const GENERATED_SQL = `
 -- RSPC 2026 Core Schema
