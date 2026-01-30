@@ -5,19 +5,26 @@ const supabaseUrl = 'https://nqgsrvqepavqkbpnjlzc.supabase.co';
 
 /**
  * Supabase client initialized via environment variables.
- * Instruction: obtain API key exclusively from process.env.API_KEY.
+ * In the browser, we rely on the window.process shim.
  */
-const supabaseKey = process.env.API_KEY || '';
+const getApiKey = (): string => {
+  try {
+    return (window as any).process?.env?.API_KEY || '';
+  } catch {
+    return '';
+  }
+};
+
+const supabaseKey = getApiKey();
 
 if (!supabaseKey) {
-  console.error("RSPC Critical Error: Supabase API Key is missing from the environment.");
+  console.warn("RSPC: Supabase API Key is not set. Login may fail until configured.");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey || 'KEY_REQUIRED');
 
 export const GENERATED_SQL = `
 -- RSPC 2026 Core Schema
--- Run this in your Supabase SQL Editor if you haven't yet.
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS profiles (
