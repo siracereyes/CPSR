@@ -1,23 +1,13 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://nqgsrvqepavqkbpnjlzc.supabase.co';
 
 /**
- * Robust API key retrieval for distributed ESM environments.
+ * API key retrieval strictly using process.env.API_KEY as per guidelines.
  */
-const getApiKey = (): string => {
-  try {
-    // Check various injection points provided by the platform
-    const key = (typeof process !== 'undefined' && process.env?.API_KEY) || 
-                (window as any).process?.env?.API_KEY ||
-                "";
-    return key;
-  } catch (e) {
-    return '';
-  }
-};
-
-const supabaseKey = getApiKey();
+// Fixed: Obtained exclusively from the environment variable process.env.API_KEY
+const supabaseKey = process.env.API_KEY || '';
 
 if (!supabaseKey) {
   console.warn("RSPC WARNING: Supabase API Key is missing. Check your project environment variables.");
