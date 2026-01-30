@@ -14,29 +14,31 @@ const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
-  const [hasCheckedSession, setHasCheckedSession] = useState(false);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   useEffect(() => {
-    const initializeAuth = async () => {
+    // Immediate check for existing session
+    const checkSession = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         if (currentSession) {
           setSession(currentSession);
-          await fetchProfile(currentSession.user.id);
+          fetchProfile(currentSession.user.id);
         }
       } catch (err) {
-        console.error("Auth check error:", err);
+        console.error("Initial session check failed:", err);
       } finally {
-        setHasCheckedSession(true);
+        setIsAuthChecking(false);
       }
     };
 
-    initializeAuth();
+    checkSession();
 
+    // Listen for auth changes (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession);
       if (newSession) {
-        await fetchProfile(newSession.user.id);
+        fetchProfile(newSession.user.id);
       } else {
         setProfile(null);
       }
@@ -47,22 +49,17 @@ const App: React.FC = () => {
 
   const fetchProfile = async (uid: string) => {
     try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single();
-      if (error) throw error;
+      const { data } = await supabase.from('profiles').select('*').eq('id', uid).single();
       if (data) setProfile(data);
     } catch (err) {
-      console.warn("Profile fetch failed (might be expected for new users):", err);
+      console.warn("Profile fetch failed:", err);
     }
   };
 
-  // If no session found after initial check, show login
-  if (!session && hasCheckedSession) {
-    return <Login />;
-  }
-
-  // Fallback if session exists but profile isn't loaded yet, or still checking
+  // If we have no session, show Login. 
+  // We don't block with a blank page during the background session check.
   if (!session) {
-    return <Login />; // Show login by default to prevent blank screen
+    return <Login />;
   }
 
   const isAdmin = profile?.role === 'admin';
@@ -91,7 +88,7 @@ const App: React.FC = () => {
         <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="text-left">
             <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded">
-              {profile?.role || 'User'}
+              {profile?.role || 'Authorized User'}
             </span>
             <h2 className="text-2xl font-bold text-slate-900 mt-1">
               {profile?.full_name || session.user.email}
@@ -99,7 +96,7 @@ const App: React.FC = () => {
           </div>
           <button 
             onClick={() => supabase.auth.signOut()}
-            className="bg-white px-4 py-2 rounded-xl border border-slate-200 text-slate-400 hover:text-red-600 text-xs font-bold flex items-center transition-all shadow-sm hover:shadow"
+            className="bg-white px-4 py-2 rounded-xl border border-slate-200 text-slate-400 hover:text-red-600 text-xs font-bold flex items-center transition-all shadow-sm hover:shadow active:scale-95"
           >
             Sign Out
             <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,7 +108,7 @@ const App: React.FC = () => {
         {!profile && isAdmin && (
           <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-700 text-xs flex items-center gap-3 text-left">
             <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
-            <p><strong>Database Desync:</strong> No matching record in <code>profiles</code> table. Ensure your project is initialized via the System tab.</p>
+            <p><strong>Configuration Required:</strong> No matching record in the <code>profiles</code> table. Go to the <strong>System</strong> tab to run the SQL setup script if this is a new project.</p>
           </div>
         )}
 

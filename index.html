@@ -7,8 +7,9 @@
     <title>RSPC 2026 Tabulation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Critical: Shim process.env for browser usage before any modules load
-        window.process = { env: { API_KEY: "" } };
+        // Use a non-destructive shim for process.env
+        window.process = window.process || {};
+        window.process.env = window.process.env || {};
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
