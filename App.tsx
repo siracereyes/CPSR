@@ -14,9 +14,12 @@ const App: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [loading, setLoading] = useState(true);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
     const initializeApp = async () => {
+      setLoading(true);
+      setInitError(null);
       try {
         const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
         
@@ -26,8 +29,9 @@ const App: React.FC = () => {
         if (currentSession) {
           await fetchProfile(currentSession.user.id);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Auth initialization error:", err);
+        setInitError(`Security layer failed: ${err.message || 'Unknown network error'}`);
       } finally {
         setLoading(false);
       }
@@ -52,6 +56,7 @@ const App: React.FC = () => {
     try {
       const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single();
       if (error) {
+        // If profile doesn't exist, it's a soft error that the UI handles below
         console.warn("Profile fetch warning:", error.message);
       }
       if (data) setProfile(data);
@@ -65,6 +70,16 @@ const App: React.FC = () => {
       <div className="flex flex-col items-center">
         <div className="w-12 h-12 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mb-4"></div>
         <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Verifying Security Layer</p>
+      </div>
+    </div>
+  );
+
+  if (initError) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+      <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-2xl border border-red-100 text-center">
+        <h2 className="text-xl font-bold text-slate-900 mb-2">Initialization Error</h2>
+        <p className="text-red-500 text-sm mb-6 font-medium">{initError}</p>
+        <button onClick={() => window.location.reload()} className="w-full bg-blue-900 text-white font-bold py-3 rounded-xl shadow-lg">Retry System Boot</button>
       </div>
     </div>
   );
@@ -95,7 +110,7 @@ const App: React.FC = () => {
     <Layout activeTab={activeTab} setActiveTab={setActiveTab} customNav={navItems}>
       <div className="animate-in fade-in duration-500">
         <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
+          <div className="text-left">
             <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded">
               {profile?.role || 'Restricted Access'}
             </span>
@@ -115,9 +130,9 @@ const App: React.FC = () => {
         </div>
         
         {!profile && isAdmin && (
-          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-700 text-xs flex items-center gap-3">
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-700 text-xs flex items-center gap-3 text-left">
             <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
-            <p><strong>Database Desync:</strong> No matching record in <code>profiles</code> table. Run the SQL in System tab to fix.</p>
+            <p><strong>Database Desync:</strong> No matching record in <code>profiles</code> table for this account. Go to System tab to run SQL setup.</p>
           </div>
         )}
 

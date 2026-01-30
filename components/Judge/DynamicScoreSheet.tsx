@@ -16,33 +16,43 @@ const DynamicScoreSheet: React.FC<Props> = ({ assignment, userId }) => {
   const [timerValue, setTimerValue] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const rubric = RUBRICS[assignment.category] || RUBRICS['News Writing'];
   const isBroadcast = assignment.category.includes('Broadcasting');
 
   useEffect(() => {
     const fetchContestants = async () => {
-      const { data } = await supabase
-        .from('contestants')
-        .select('*')
-        .eq('category', assignment.category)
-        .eq('level', assignment.level)
-        .eq('medium', assignment.medium);
-      if (data) setContestants(data);
+      try {
+        const { data, error } = await supabase
+          .from('contestants')
+          .select('*')
+          .eq('category', assignment.category)
+          .eq('level', assignment.level)
+          .eq('medium', assignment.medium);
+        
+        if (error) throw error;
+        if (data) setContestants(data);
+      } catch (err: any) {
+        setErrorMessage(`Failed to load contestants: ${err.message || 'Unknown network error'}`);
+      }
     };
     fetchContestants();
   }, [assignment]);
 
   const handleScoreChange = (id: string, val: string) => {
+    setErrorMessage(null);
     const num = Math.max(0, parseFloat(val) || 0);
     const criterion = rubric.criteria.find(c => c.id === id);
     if (criterion) {
+      if (num > criterion.maxScore) {
+        setErrorMessage(`${criterion.label} score cannot exceed ${criterion.maxScore}`);
+      }
       setScores(prev => ({ ...prev, [id]: Math.min(num, criterion.maxScore) }));
     }
   };
 
   const calculateResults = () => {
-    // Fix: Explicitly type the reduce parameters to avoid unknown operator errors (Line 46 fix)
     const rawTotal = Object.values(scores).reduce((acc: number, val: any) => acc + (val as number), 0);
     let deduction = 0;
     if (isBroadcast) {
@@ -50,7 +60,6 @@ const DynamicScoreSheet: React.FC<Props> = ({ assignment, userId }) => {
         ? calculateRadioDeduction(timerValue) 
         : calculateTVDeduction(timerValue);
     }
-    // Fix: Explicitly cast return values as numbers to resolve arithmetic and toFixed errors (Line 53 fix)
     return { 
       rawTotal: rawTotal as number, 
       deduction: deduction as number, 
@@ -58,35 +67,51 @@ const DynamicScoreSheet: React.FC<Props> = ({ assignment, userId }) => {
     };
   };
 
+  const validate = () => {
+    if (!selectedId) return "Please select a contestant code.";
+    if (Object.keys(scores).length < rubric.criteria.length) return "All rubric criteria must be scored.";
+    if (isBroadcast && (timerValue < 0)) return "Invalid production time entered.";
+    return null;
+  };
+
   const handleSubmit = async () => {
-    if (!selectedId) return;
+    const validationError = validate();
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
     setIsSubmitting(true);
+    setErrorMessage(null);
     const { rawTotal, deduction, final } = calculateResults();
 
-    const { error } = await supabase.from('scores').upsert({
-      contestant_id: selectedId,
-      judge_id: userId,
-      category: assignment.category,
-      level: assignment.level,
-      medium: assignment.medium,
-      raw_scores: scores,
-      total_score: rawTotal,
-      time_deduction: deduction,
-      final_score: final,
-      is_final: true
-    }, { onConflict: 'contestant_id, judge_id' });
+    try {
+      const { error } = await supabase.from('scores').upsert({
+        contestant_id: selectedId,
+        judge_id: userId,
+        category: assignment.category,
+        level: assignment.level,
+        medium: assignment.medium,
+        raw_scores: scores,
+        total_score: rawTotal,
+        time_deduction: deduction,
+        final_score: final,
+        is_final: true
+      }, { onConflict: 'contestant_id, judge_id' });
 
-    setIsSubmitting(false);
-    if (!error) {
+      if (error) throw error;
+
       setIsSuccess(true);
       setTimeout(() => {
         setIsSuccess(false);
         setSelectedId('');
         setScores({});
         setTimerValue(0);
-      }, 2000);
-    } else {
-      alert(error.message);
+      }, 2500);
+    } catch (err: any) {
+      setErrorMessage(`Submission failed: ${err.message || 'Database error occurred. Please try again.'}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -97,12 +122,15 @@ const DynamicScoreSheet: React.FC<Props> = ({ assignment, userId }) => {
           <h2 className="text-2xl font-bold text-slate-900">{assignment.category}</h2>
           <p className="text-slate-500 font-medium">{assignment.medium} • {assignment.level}</p>
         </div>
-        <div className="w-full md:w-64">
+        <div className="w-full md:w-64 text-left">
           <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Select Participant Code</label>
           <select 
             className="w-full p-4 border-2 border-slate-100 rounded-xl bg-slate-50 focus:border-blue-500 outline-none transition-all font-bold"
             value={selectedId}
-            onChange={e => setSelectedId(e.target.value)}
+            onChange={e => {
+              setSelectedId(e.target.value);
+              setErrorMessage(null);
+            }}
           >
             <option value="">-- Choose Code --</option>
             {contestants.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
@@ -110,10 +138,22 @@ const DynamicScoreSheet: React.FC<Props> = ({ assignment, userId }) => {
         </div>
       </div>
 
+      {errorMessage && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl flex items-center gap-3 animate-pulse">
+          <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          </svg>
+          <p className="text-sm font-bold">{errorMessage}</p>
+        </div>
+      )}
+
       {!selectedId ? (
         <div className="py-20 text-center">
           <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+            <svg className="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
           </div>
           <h3 className="text-lg font-bold text-slate-400">Please select a participant code to begin scoring</h3>
         </div>
@@ -137,7 +177,9 @@ const DynamicScoreSheet: React.FC<Props> = ({ assignment, userId }) => {
                   step="0.5"
                   value={scores[c.id] || ''}
                   onChange={e => handleScoreChange(c.id, e.target.value)}
-                  className="w-full p-4 border-2 border-white rounded-xl shadow-inner focus:border-blue-500 outline-none transition-all text-xl font-bold bg-white"
+                  className={`w-full p-4 border-2 rounded-xl shadow-inner outline-none transition-all text-xl font-bold bg-white ${
+                    scores[c.id] > c.maxScore ? 'border-red-300 focus:border-red-500' : 'border-white focus:border-blue-500'
+                  }`}
                   placeholder={`Score 0.0 - ${c.maxScore}.0`}
                 />
               </div>
@@ -175,7 +217,7 @@ const DynamicScoreSheet: React.FC<Props> = ({ assignment, userId }) => {
             </div>
             <button 
               onClick={handleSubmit}
-              disabled={isSubmitting || Object.keys(scores).length < rubric.criteria.length}
+              disabled={isSubmitting}
               className={`w-full md:w-auto px-12 py-5 rounded-2xl font-black text-lg shadow-lg transition-all active:scale-95 ${
                 isSubmitting ? 'bg-slate-700 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600'
               }`}

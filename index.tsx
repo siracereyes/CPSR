@@ -1,5 +1,4 @@
-
-import React, { ReactNode, ErrorInfo } from 'react';
+import React, { Component, ReactNode, ErrorInfo } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
@@ -12,11 +11,16 @@ interface ErrorBoundaryState {
   error: any;
 }
 
-// Fixed: Explicitly use React.Component and ensure state is correctly typed to resolve property existence errors (Line 17, 29, 39, 52 fix)
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+// Fixed: Explicitly use Component from react and ensure state/props are correctly typed to resolve property existence errors (Line 19, 32, 42, 56 fix)
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Explicitly initialize state property to ensure property existence within TypeScript's strict mode
+  public state: ErrorBoundaryState = { 
+    hasError: false, 
+    error: null 
+  };
+
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error: any): ErrorBoundaryState {
@@ -28,7 +32,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   render() {
-    // Fixed: state access is now correctly resolved through React.Component inheritance
+    // Fixed: state access is now correctly resolved through Component inheritance
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
@@ -52,7 +56,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
         </div>
       );
     }
-    // Fixed: props access is now correctly resolved via React.Component base class
+    // Fixed: props access is now correctly resolved via Component base class
     return this.props.children;
   }
 }
