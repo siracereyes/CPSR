@@ -7,16 +7,16 @@
     <title>RSPC 2026 Tabulation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Global environment shim - critical for browser-side process.env access
+        // Critical: Shim process.env for browser usage
         window.process = window.process || {};
         window.process.env = window.process.env || {};
         
-        // Diagnostic timer for deployment monitoring
+        // Diagnostic for boot sequence
         window.addEventListener('load', () => {
             setTimeout(() => {
                 const root = document.getElementById('root');
                 if (root && root.innerHTML === "") {
-                    console.error("RSPC Boot Error: Application failed to mount.");
+                    console.error("RSPC 2026: Application failed to mount in 5 seconds.");
                     root.innerHTML = `
                         <div class="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center">
                             <div class="max-w-md bg-white p-10 rounded-[2.5rem] shadow-2xl border border-red-100">
@@ -26,8 +26,8 @@
                                     </svg>
                                 </div>
                                 <h1 class="text-xl font-black text-slate-900 mb-2">Engine Timeout</h1>
-                                <p class="text-slate-500 text-sm mb-6">The application failed to start. This may be due to a configuration mismatch or network failure during module loading.</p>
-                                <button onclick="window.location.reload()" class="bg-blue-900 text-white px-6 py-3 rounded-xl font-bold shadow-lg">Retry Boot</button>
+                                <p class="text-slate-500 text-sm mb-6 leading-relaxed">The application failed to initialize. Please check if the <b>API_KEY</b> environment variable is correctly set in your deployment settings.</p>
+                                <button onclick="window.location.reload()" class="bg-blue-900 text-white px-8 py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-all">Retry Boot</button>
                             </div>
                         </div>
                     `;
@@ -37,7 +37,7 @@
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
         
         #root:empty {
             height: 100vh;
@@ -45,15 +45,24 @@
             align-items: center;
             justify-content: center;
             background: #f8fafc;
+            flex-direction: column;
+            gap: 1.5rem;
         }
-        #root:empty::after {
+        #root:empty::before {
             content: "";
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             border: 4px solid #e2e8f0;
             border-top-color: #1e3a8a;
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            animation: spin 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+        }
+        #root:empty::after {
+            content: "RSPC 2026 • INITIALIZING";
+            font-size: 10px;
+            font-weight: 900;
+            color: #1e3a8a;
+            letter-spacing: 0.2em;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>

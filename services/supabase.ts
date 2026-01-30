@@ -2,11 +2,16 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://nqgsrvqepavqkbpnjlzc.supabase.co';
+
 /**
- * As per instructions, API_KEY is obtained exclusively from the environment.
- * The variable is assumed to be pre-configured and valid.
+ * Supabase client initialized via environment variables.
+ * Instruction: obtain API key exclusively from process.env.API_KEY.
  */
-const supabaseKey = process.env.API_KEY as string;
+const supabaseKey = process.env.API_KEY || '';
+
+if (!supabaseKey) {
+  console.error("RSPC Critical Error: Supabase API Key is missing from the environment.");
+}
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
